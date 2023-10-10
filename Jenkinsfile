@@ -101,15 +101,28 @@ pipeline {
             }
         }
 
-        stage('Deploy to kubernets') {
+        stage('Deploy to kubernetes') {
             steps {
                 script {
                    
                     withKubeConfig([credentialsId: 'K8s', serverUrl: '']) {
-                        sh ('kubectl apply -f deployment.yml')
+                        sh ('kubectl apply -f deployment.yaml')
                     }
                 }
             }
+        }
+
+        stage('Clean up containers') {   //if container runs it will stop and remove this block
+          steps {
+           script {
+             try {
+                sh 'docker stop shopping-cart'
+                sh 'docker rm shopping-cart'
+                } catch (Exception e) {
+                  echo "Container petclinic-application not found, moving to next stage"  
+                }
+            }
+          }
         }
 
 
