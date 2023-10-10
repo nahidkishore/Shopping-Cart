@@ -34,6 +34,18 @@ pipeline {
                 sh "mvn test -DskipTests=true"
             }
         }
+         stage("Trivy Fs Scan"){
+           steps{
+               sh "trivy fs ." 
+            }
+        }
+
+         stage("OWASP Dependency Check"){
+           steps{
+                dependencyCheck additionalArguments: '--scan ./' , odcInstallation: 'DP-Check'
+                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+            }
+        }
         
         stage("Sonarqube Analysis "){
             steps{
@@ -58,13 +70,49 @@ pipeline {
                 sh "mvn clean install -DskipTests=true"
             }
         }
-        stage("OWASP Dependency Check"){
-           steps{
-                dependencyCheck additionalArguments: '--scan ./' , odcInstallation: 'DP-Check'
-                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+       
+        
+            stage("Deploy to Nexus"){
+            steps{
+                withMaven(globalMavenSettingsConfig: 'global-settings-xml') {
+                sh "mvn deploy -DskipTests=true"
+                }
             }
         }
-        
+
+        stage("Build and Push to Docker Hub"){
+               steps{
+                   
+                echo 'login into docker hub and pushing image....'
+                withCredentials([usernamePassword(credentialsId: 'dockerHub', passwordVariable: 'dockerHubPassword', usernameVariable: 'dockerHubUser')]){
+                     sh "docker build . -t shopping-cart -f docker/Dockerfile"
+                     sh "docker tag shopping-cart ${env.dockerHubUser}/shopping-cart:latest"
+                     sh "docker login -u ${env.dockerHubUser} -p ${env.dockerHubPassword}"
+                     sh "docker push ${env.dockerHubUser}/shopping-cart:latest"
+
+
+               }
+           }
+         }
+
+         stage("Deploy to Container"){
+            steps{
+                sh " docker run -d --name shopping-cart -p 8085:8070 nahid0002/shopping-cart:latest "
+            }
+        }
+
+        stage('Deploy to kubernets') {
+            steps {
+                script {
+                   
+                    withKubeConfig([credentialsId: 'K8s', serverUrl: '']) {
+                        sh ('kubectl apply -f deployment.yaml')
+                    }
+                }
+            }
+        }
+
+
         
 
     }
