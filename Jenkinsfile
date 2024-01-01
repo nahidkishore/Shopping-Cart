@@ -124,18 +124,7 @@ pipeline {
             }
         }
 
-        stage('Clean up containers') {   //if container runs it will stop and remove this block
-          steps {
-           script {
-             try {
-                sh 'docker stop shopping-cart'
-                sh 'docker rm shopping-cart'
-                } catch (Exception e) {
-                  echo "Container petclinic-application not found, moving to next stage"  
-                }
-            }
-          }
-        }
+    
 
 
         
