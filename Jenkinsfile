@@ -10,7 +10,7 @@ pipeline {
     }
 
 
-    stages {
+        stages {
         stage("Clean Workspace"){
             steps{
                 cleanWs()
@@ -29,18 +29,18 @@ pipeline {
                 sh "mvn clean compile -DskipTests=true"
             }
         }
-          stage("Test Cases"){
+        stage("Test Cases"){
             steps{
                 sh "mvn test -DskipTests=true"
             }
         }
-         stage("Trivy Fs Scan"){
-           steps{
-               sh "trivy fs ." 
+        stage('TRIVY FS SCAN') {
+            steps {
+                sh "trivy fs . > trivyfs.txt"
             }
         }
 
-         stage("OWASP Dependency Check"){
+        stage("OWASP Dependency Check"){
            steps{
                 dependencyCheck additionalArguments: '--scan ./' , odcInstallation: 'DP-Check'
                 dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
@@ -65,14 +65,14 @@ pipeline {
 
      }
      
-     stage("Build Artifact"){
+        stage("Build Artifact"){
             steps{
                 sh "mvn clean install -DskipTests=true"
             }
         }
        
         
-            stage("Deploy to Nexus"){
+        stage("Deploy to Nexus"){
             steps{
                 withMaven(globalMavenSettingsConfig: 'global-settings-xml') {
                 sh "mvn deploy -DskipTests=true"
@@ -95,7 +95,19 @@ pipeline {
            }
          }
 
-         stage("Deploy to Container"){
+          stage("TRIVY Docker Image Scan"){
+            steps{
+
+                withCredentials([usernamePassword(credentialsId: 'dockerHub', passwordVariable: 'dockerHubPassword', usernameVariable: 'dockerHubUser')]){
+                     
+                    sh "trivy image ${env.dockerHubUser}/shopping-cart:latest" 
+
+               }
+                
+            }
+        }
+
+         stage("Deploy to Docker Container"){
             steps{
                 sh " docker run -d --name shopping-cart -p 8085:8070 nahid0002/shopping-cart:latest "
             }
@@ -129,4 +141,16 @@ pipeline {
         
 
     }
+
+     post {
+            always {
+        emailext attachLog: true,
+            subject: "'${currentBuild.result}'",
+            body: "Project: ${env.JOB_NAME}<br/>" +
+                "Build Number: ${env.BUILD_NUMBER}<br/>" +
+                "URL: ${env.BUILD_URL}<br/>",
+            to: 'nahidkishore99@gmail.com',
+            attachmentsPattern: 'trivy.txt'
+        }
+        }   
 }
