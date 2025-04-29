@@ -1,4 +1,4 @@
-FROM eclipse-temurin:17-jdk-alpine
+FROM openjdk:8u151-jdk-alpine3.7
 
 EXPOSE 8070
 
@@ -7,4 +7,4 @@ WORKDIR $APP_HOME
 
 COPY target/shopping-cart-*.jar app.jar
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT exec java -jar app.jar
