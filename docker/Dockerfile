@@ -1,6 +1,6 @@
 FROM openjdk:8u151-jdk-alpine3.7
 
-LABEL maintainer="nahid@example.com"
+LABEL maintainer="nahidkishore99@gmail.com"
 
 EXPOSE 8070
 
